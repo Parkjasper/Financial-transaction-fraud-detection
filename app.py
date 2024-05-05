@@ -1,53 +1,38 @@
-from fastapi import FastAPI, File, Query, UploadFile, HTTPException, Form
-from fastapi.responses import FileResponse, PlainTextResponse
-import uvicorn
+import streamlit as st
 import joblib
 import numpy as np
 from pydantic import BaseModel
 
-
-
-app = FastAPI(
-    title="Credit Card Fraud Detection API",
-    description="""An API that utilises a Machine Learning model that detects if a credit card transaction is fraudulent or not based on the following features: hours, amount, transaction type etc.""",
-    version="1.0.0", debug=True)
-
-
+# Load the machine learning model
 model = joblib.load('frauddetection.pkl')
 
-@app.get("/", response_class=PlainTextResponse)
-async def running():
-  note = """
-Credit Card Fraud Detection API 🙌🏻
+# Define the Streamlit app
+st.title("Credit Card Fraud Detection API")
+st.markdown("""
+An API that utilizes a Machine Learning model to detect if a credit card transaction is fraudulent or not based on the following features: hours, amount, transaction type etc.
+""")
 
-Note: add "/docs" to the URL to get the Swagger UI Docs or "/redoc"
-  """
-  return note
+# Define the input form
+st.sidebar.title("Input Data")
+step = st.sidebar.number_input("Step", value=1)
+types = st.sidebar.number_input("Type", value=1)
+amount = st.sidebar.number_input("Amount", value=0.0)
+oldbalanceorig = st.sidebar.number_input("Old Balance Orig", value=0.0)
+newbalanceorig = st.sidebar.number_input("New Balance Orig", value=0.0)
+oldbalancedest = st.sidebar.number_input("Old Balance Dest", value=0.0)
+newbalancedest = st.sidebar.number_input("New Balance Dest", value=0.0)
+isflaggedfraud = st.sidebar.number_input("Is Flagged Fraud", value=0.0)
 
-favicon_path = 'fraud.jpg'
-@app.get('/fraud.jpg', include_in_schema=False)
-async def favicon():
-    return FileResponse(favicon_path)
-																	
-class fraudDetection(BaseModel):
-    step:int
-    types:int
-    amount:float	
-    oldbalanceorig:float	
-    newbalanceorig:float	
-    oldbalancedest:float	
-    newbalancedest:float	
-    isflaggedfraud:float
-
-
-@app.post('/predict')
-def predict(data : fraudDetection):
-                                                                                                                                                                                                                                
-    features = np.array([[data.step, data.types, data.amount, data.oldbalanceorig, data.newbalanceorig, data.oldbalancedest, data.newbalancedest, data.isflaggedfraud]])
-    model = joblib.load('frauddetection.pkl')
-
+# Define the prediction function
+def predict(step, types, amount, oldbalanceorig, newbalanceorig, oldbalancedest, newbalancedest, isflaggedfraud):
+    features = np.array([[step, types, amount, oldbalanceorig, newbalanceorig, oldbalancedest, newbalancedest, isflaggedfraud]])
     predictions = model.predict(features)
     if predictions == 1:
-        return {"fraudulent"}
-    elif predictions == 0:
-        return {"not fraudulent"}
+        return "Fraudulent"
+    else:
+        return "Not Fraudulent"
+
+# Make predictions and display the result
+if st.sidebar.button("Predict"):
+    result = predict(step, types, amount, oldbalanceorig, newbalanceorig, oldbalancedest, newbalancedest, isflaggedfraud)
+    st.write(f"Prediction: {result}")
